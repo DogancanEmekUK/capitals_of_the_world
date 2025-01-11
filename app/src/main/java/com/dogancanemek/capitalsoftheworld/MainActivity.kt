@@ -7,46 +7,51 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.dogancanemek.capitalsoftheworld.ui.theme.CapitalsOfTheWorldTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
-    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             CapitalsOfTheWorldTheme {
-                Scaffold(
+                val navController = rememberNavController()
+                Surface(
                     modifier = Modifier.fillMaxSize(),
-                    topBar = {
-                        TopAppBar(
-                            title = { Text("Capitals of the World") },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = Color(0xFF005874),
-                                titleContentColor = Color(0xFFbff0ff)
-                            )
-                        )
-                    }
-                ) { innerPadding ->
-                    CountryList(
-                        countries = countries,
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    Navigation(navController = navController)
                 }
             }
         }
@@ -54,22 +59,112 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun CountryList(countries: List<String>, modifier: Modifier = Modifier) {
-    LazyColumn(modifier = modifier.background(Color(0xFFbff0ff)).fillMaxSize()) {
-        items(countries) { capital ->
-            Text(text = capital,
-                fontSize = 20.sp,
-                color = Color(0xFF005874),
-                modifier = Modifier.padding(8.dp)
-                    .border(2.dp, Color(0xFF005874),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                            .background(Color(0xFFbff0ff))
-                            .fillMaxSize()
-                            .padding(6.dp)
-                    .clickable {
-
-                    })
+fun Navigation(navController: NavHostController) {
+    NavHost(navController = navController, startDestination = "home") {
+        composable("home") {
+            HomeScreen(navController = navController)
         }
+        composable("capital") {
+            CapitalScreen()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(navController: NavHostController) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Countries of the World") },
+                colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color.LightGray)
+            )
+        }
+    ) { paddingValues ->
+        CountryList(paddingValues = paddingValues, navController = navController)
+    }
+}
+
+@Composable
+fun CountryList(paddingValues: PaddingValues, navController: NavHostController) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(countries) { country ->
+            CountryItem(country = country, navController = navController)
+        }
+    }
+}
+
+@Composable
+fun CountryItem(country: String, navController: NavHostController) {
+    Column(
+        modifier = Modifier
+            .clickable {
+                navController.navigate("capital")
+            }
+            .background(Color.White)
+            .border(1.dp, Color.Gray)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            text = country,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+    }
+}
+
+@Composable
+fun CapitalScreen() {
+    val geminiResponse = remember { mutableStateOf("Loading...") }
+    val apiKey = "AIzaSyArjIVZmMyWNmp_COajN-CtE2qD1NlIxUU" // Replace with your actual API key
+
+//    LaunchedEffect(Unit) {
+//        withContext(Dispatchers.IO) {
+//            try {
+//                val model = GenerativeModel(
+//                    modelName = "gemini-pro",
+//                    apiKey = apiKey,
+//                    config = GenerativeModelConfig(
+//                        temperature = 0.9f,
+//                        topK = 1,
+//                        topP = 1f,
+//                        maxOutputTokens = 2048
+//                    )
+//                )
+//                val prompt = "How are you?"
+//                val response = model.generateContent(content { text(prompt) })
+//                geminiResponse.value = response.text ?: "No response from Gemini"
+//            } catch (e: Exception) {
+//                geminiResponse.value = "Error: ${e.message}"
+//            }
+//        }
+//    }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Gemini says:",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+        Text(
+            text = geminiResponse.value,
+            fontSize = 18.sp,
+            color = Color.Black
+        )
     }
 }
 
