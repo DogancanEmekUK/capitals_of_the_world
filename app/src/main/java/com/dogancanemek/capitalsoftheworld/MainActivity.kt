@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,7 +22,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -28,7 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.text
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,7 +38,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.dogancanemek.capitalsoftheworld.BuildConfig.apiKey
 import com.dogancanemek.capitalsoftheworld.ui.theme.CapitalsOfTheWorldTheme
+import com.google.ai.client.generativeai.GenerativeModel
+import com.google.ai.client.generativeai.type.content
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -64,8 +69,9 @@ fun Navigation(navController: NavHostController) {
         composable("home") {
             HomeScreen(navController = navController)
         }
-        composable("capital") {
-            CapitalScreen()
+        composable("capital/{country}") { backStackEntry ->
+            val country = backStackEntry.arguments?.getString("country")
+            CapitalScreen(country = country)
         }
     }
 }
@@ -76,8 +82,7 @@ fun HomeScreen(navController: NavHostController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Countries of the World") },
-                colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color.LightGray)
+                title = { Text("Countries of the World") }
             )
         }
     ) { paddingValues ->
@@ -105,7 +110,7 @@ fun CountryItem(country: String, navController: NavHostController) {
     Column(
         modifier = Modifier
             .clickable {
-                navController.navigate("capital")
+                navController.navigate("capital/$country")
             }
             .background(Color.White)
             .border(1.dp, Color.Gray)
@@ -123,45 +128,55 @@ fun CountryItem(country: String, navController: NavHostController) {
 }
 
 @Composable
-fun CapitalScreen() {
-    val geminiResponse = remember { mutableStateOf("Loading...") }
-    val apiKey = "AIzaSyArjIVZmMyWNmp_COajN-CtE2qD1NlIxUU" // Replace with your actual API key
+fun CapitalScreen(country: String?) {
+    val geminiResponseOne = remember { mutableStateOf("Loading...") }
+    val geminiResponseTwo = remember { mutableStateOf("Capital of $country is...") }
 
-//    LaunchedEffect(Unit) {
-//        withContext(Dispatchers.IO) {
-//            try {
-//                val model = GenerativeModel(
-//                    modelName = "gemini-pro",
-//                    apiKey = apiKey,
-//                    config = GenerativeModelConfig(
-//                        temperature = 0.9f,
-//                        topK = 1,
-//                        topP = 1f,
-//                        maxOutputTokens = 2048
-//                    )
-//                )
-//                val prompt = "How are you?"
-//                val response = model.generateContent(content { text(prompt) })
-//                geminiResponse.value = response.text ?: "No response from Gemini"
-//            } catch (e: Exception) {
-//                geminiResponse.value = "Error: ${e.message}"
-//            }
-//        }
-//    }
+        LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            try {
+                val model = GenerativeModel(
+                    modelName = "gemini-pro",
+                    apiKey = apiKey
+                )
+                val promptOne = "Write a short and interesting paragraph about the capital of $country."
+                val responseOne = model.generateContent(content { text(promptOne) })
+                val promptTwo = "Write the capital of $country in a single word."
+                val responseTwo = model.generateContent(content { text(promptTwo) })
+                geminiResponseOne.value = responseOne.text ?: "No response from Gemini"
+                geminiResponseTwo.value = responseTwo.text ?: "No response from Gemini"
+            } catch (e: Exception) {
+                geminiResponseOne.value = "Error: ${e.message}"
+                geminiResponseTwo.value = "Error: ${e.message}"
+            }
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_launcher_background), // Replace with your image resource
+            contentDescription = "Large Image",
+            modifier = Modifier.size(120.dp),
+            contentScale = ContentScale.Fit
+        )
+        Image(
+            painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with your image resource
+            contentDescription = "Small Image",
+            modifier = Modifier.size(80.dp),
+            contentScale = ContentScale.Fit
+        )
         Text(
-            text = "Gemini says:",
+            text = geminiResponseTwo.value,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = Color.Black
         )
         Text(
-            text = geminiResponse.value,
+            text = geminiResponseOne.value,
             fontSize = 18.sp,
             color = Color.Black
         )
