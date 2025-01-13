@@ -9,19 +9,30 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarColors
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -71,7 +82,7 @@ fun Navigation(navController: NavHostController) {
         }
         composable("capital/{country}") { backStackEntry ->
             val country = backStackEntry.arguments?.getString("country")
-            CapitalScreen(country = country)
+            CapitalScreen(country = country, navController = navController)
         }
     }
 }
@@ -82,7 +93,8 @@ fun HomeScreen(navController: NavHostController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Countries of the World") }
+                title = { Text("Countries of the World", color = Color(0xFFF8EDED)) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF173B45))
             )
         }
     ) { paddingValues ->
@@ -95,6 +107,7 @@ fun CountryList(paddingValues: PaddingValues, navController: NavHostController) 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFFFF8225))
             .padding(paddingValues),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -109,11 +122,12 @@ fun CountryList(paddingValues: PaddingValues, navController: NavHostController) 
 fun CountryItem(country: String, navController: NavHostController) {
     Column(
         modifier = Modifier
+            .fillMaxSize()
             .clickable {
                 navController.navigate("capital/$country")
             }
-            .background(Color.White)
-            .border(1.dp, Color.Gray)
+            .background(Color(0xFFFF8225))
+            .border(1.dp, Color(0xFFB43F3F), shape = RoundedCornerShape(16.dp))
             .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.Start
@@ -122,24 +136,26 @@ fun CountryItem(country: String, navController: NavHostController) {
             text = country,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = Color(0xFFF8EDED)
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CapitalScreen(country: String?) {
+fun CapitalScreen(country: String?, navController: NavHostController) {
     val geminiResponseOne = remember { mutableStateOf("Loading...") }
     val geminiResponseTwo = remember { mutableStateOf("Capital of $country is...") }
 
-        LaunchedEffect(Unit) {
+    LaunchedEffect(country) {
         withContext(Dispatchers.IO) {
             try {
                 val model = GenerativeModel(
                     modelName = "gemini-pro",
                     apiKey = apiKey
                 )
-                val promptOne = "Write a short and interesting paragraph about the capital of $country."
+                val promptOne = "Write an interesting paragraph about the capital of $country and mention all the places that one should visit." +
+                        "Add how you can say hello in the language of that capital."
                 val responseOne = model.generateContent(content { text(promptOne) })
                 val promptTwo = "Write the capital of $country in a single word."
                 val responseTwo = model.generateContent(content { text(promptTwo) })
@@ -151,35 +167,50 @@ fun CapitalScreen(country: String?) {
             }
         }
     }
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_launcher_background), // Replace with your image resource
-            contentDescription = "Large Image",
-            modifier = Modifier.size(120.dp),
-            contentScale = ContentScale.Fit
-        )
-        Image(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with your image resource
-            contentDescription = "Small Image",
-            modifier = Modifier.size(80.dp),
-            contentScale = ContentScale.Fit
-        )
-        Text(
-            text = geminiResponseTwo.value,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
-        Text(
-            text = geminiResponseOne.value,
-            fontSize = 18.sp,
-            color = Color.Black
-        )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(country ?: "", color = Color(0xFFF8EDED)) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF173B45))
+            )
+        }
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFF8225)).padding(paddingValues).padding(16.dp)) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = geminiResponseTwo.value,
+                    modifier = Modifier.background(Color(0xFFFF8225))
+                        .border(1.dp, Color(0xFFB43F3F), shape = RoundedCornerShape(16.dp))
+                        .padding(16.dp),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFF8EDED)
+                )
+                Spacer(modifier = Modifier.size(16.dp))
+                Text(
+                    text = geminiResponseOne.value,
+                    modifier = Modifier.background(Color(0xFFFF8225))
+                        .border(1.dp, Color(0xFFB43F3F), shape = RoundedCornerShape(16.dp))
+                        .padding(16.dp),
+                    fontSize = 18.sp,
+                    color = Color(0xFFF8EDED)
+                )
+            }
+            FloatingActionButton(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.BottomStart),
+                containerColor = Color(0xFF173B45),
+                contentColor = Color(0xFFF8EDED)
+            ) {
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+        }
     }
 }
 
